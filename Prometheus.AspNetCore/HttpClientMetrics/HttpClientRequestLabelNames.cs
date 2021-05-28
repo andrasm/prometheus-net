@@ -1,3 +1,5 @@
+using System;
+
 namespace Prometheus.HttpClientMetrics
 {
     /// <summary>
@@ -7,8 +9,16 @@ namespace Prometheus.HttpClientMetrics
     {
         public const string Method = "method";
         public const string Host = "host";
+        public const string Code = "code";
 
         public static readonly string[] All =
+        {
+            Code,
+            Method,
+            Host
+        };
+
+        internal static readonly string[] AvailableBeforeRequest =
         {
             Method,
             Host

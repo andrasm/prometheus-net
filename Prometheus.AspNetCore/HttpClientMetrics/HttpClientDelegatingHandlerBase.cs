@@ -1,4 +1,5 @@
 using System;
+using System.Globalization;
 using System.Linq;
 using System.Net.Http;
 
@@ -43,7 +44,11 @@ namespace Prometheus.HttpClientMetrics
             }
             else
             {
-                _metric = CreateMetricInstance(HttpClientRequestLabelNames.All);
+                _metric = options switch
+                {
+                    HttpClientInProgressOptions o => CreateMetricInstance(HttpClientRequestLabelNames.AvailableBeforeRequest),
+                    _ => CreateMetricInstance(HttpClientRequestLabelNames.All)
+                };
             }
         }
 
@@ -54,6 +59,17 @@ namespace Prometheus.HttpClientMetrics
         /// Internal for testing purposes.
         /// </remarks>
         protected internal TChild CreateChild(HttpRequestMessage request)
+        {
+            return CreateChild(request, null);
+        }
+
+        /// <summary>
+        /// Creates the metric child instance to use for measurements.
+        /// </summary>
+        /// <remarks>
+        /// Internal for testing purposes.
+        /// </remarks>
+        protected internal TChild CreateChild(HttpRequestMessage request, HttpResponseMessage? reponse)
         {
             if (!_metric.LabelNames.Any())
                 return _metric.Unlabelled;
@@ -69,6 +85,16 @@ namespace Prometheus.HttpClientMetrics
                         break;
                     case HttpClientRequestLabelNames.Host:
                         labelValues[i] = request.RequestUri.Host;
+                        break;
+                    case HttpClientRequestLabelNames.Code:
+                        if (reponse != null)
+                        {
+                            labelValues[i] = ((int)reponse.StatusCode).ToString(CultureInfo.InvariantCulture);
+                        }
+                        else
+                        {
+                            labelValues[i] = string.Empty;
+                        }
                         break;
                     default:
                         // We validate the label set on initialization, so this is impossible.

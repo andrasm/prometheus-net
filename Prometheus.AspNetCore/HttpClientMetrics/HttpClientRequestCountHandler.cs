@@ -1,7 +1,6 @@
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
-
 namespace Prometheus.HttpClientMetrics
 {
     internal sealed class HttpClientRequestCountHandler : HttpClientDelegatingHandlerBase<ICollector<ICounter>, ICounter>
@@ -11,10 +10,20 @@ namespace Prometheus.HttpClientMetrics
         {
         }
 
-        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
-            CreateChild(request).Inc();
-            return base.SendAsync(request, cancellationToken);
+            HttpResponseMessage? response;
+            try
+            {
+                response = await base.SendAsync(request, cancellationToken);
+            }
+            catch
+            {
+                CreateChild(request).Inc();
+                throw;
+            }
+            CreateChild(request, response).Inc();
+            return response;
         }
 
         protected override ICollector<ICounter> CreateMetricInstance(string[] labelNames) => MetricFactory.CreateCounter(

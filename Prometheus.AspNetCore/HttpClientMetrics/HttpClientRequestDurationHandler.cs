@@ -14,15 +14,18 @@ namespace Prometheus.HttpClientMetrics
         protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
             var stopWatch = ValueStopwatch.StartNew();
-
+            HttpResponseMessage? response;
             try
             {
-                return await base.SendAsync(request, cancellationToken);
+                response = await base.SendAsync(request, cancellationToken);
             }
-            finally
+            catch
             {
                 CreateChild(request).Observe(stopWatch.GetElapsedTime().TotalSeconds);
+                throw;
             }
+            CreateChild(request, response).Observe(stopWatch.GetElapsedTime().TotalSeconds);
+            return response;
         }
 
         protected override ICollector<IHistogram> CreateMetricInstance(string[] labelNames) => MetricFactory.CreateHistogram(
